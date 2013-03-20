@@ -62,29 +62,45 @@ static uint64_t swap_bytes_64(uint64_t num) {
 }
 
 int jpack(char * buf, size_t size, const char * format, ...) {
-	uint32_t offset = 0;
+	int offset = 0;
 
-
-
-
+	while (*format) {
+		switch (*format) {
+			case 'x':
+			case 'b':
+			case 'B':
+				length += 1;
+				break;
+			case 'h':
+			case 'H':
+				length += 2;
+				break;
+			case 'i':
+			case 'I':
+			case 'f':
+				length += 4;
+				break;
+			case 'l':
+			case 'L':
+			case 'd':
+				length += 8;
+				break;
+			case '<':
+			case '>':
+			case '!':
+				break;
+			default:
+				return -1;
+		}
+		format++;
+	}
 	return 0;
 }
 
 void junpack(const char * buf, size_t size, const char * format, ...) {
-	(void)buf; (void)size; (void)format;
-
 	uint32_t offset = 0;
-}
 
-int jpack_format_length(const char * format) {
-
-	if (format == NULL) {
-		return 0;
-	}
-
-	int length = 0;
-
-	while (format++) {
+	while (*format) {
 		switch (*format) {
 			case 'x':
 			case 'b':
@@ -113,9 +129,48 @@ int jpack_format_length(const char * format) {
 				return -1;
 		}
 	}
+	format++;
+}
+
+int jpack_format_length(const char * format) {
+	if (format == NULL) {
+		return 0;
+	}
+
+	int length = 0;
+
+	while (*format) {
+		switch (*format) {
+			case 'x':
+			case 'b':
+			case 'B':
+				length += 1;
+				break;
+			case 'h':
+			case 'H':
+				length += 2;
+				break;
+			case 'i':
+			case 'I':
+			case 'f':
+				length += 4;
+				break;
+			case 'l':
+			case 'L':
+			case 'd':
+				length += 8;
+				break;
+			case '<':
+			case '>':
+			case '!':
+				break;
+			default:
+				return -1;
+		}
+		format++;
+	}
 
 	return length;
-	
 }
 
 #ifdef TEST
