@@ -27,6 +27,40 @@
 
 #include "jpack.h"
 
+static int is_big_endian(void) {
+	union {
+		uint32_t i;
+		char c[4];
+	} bint = { 0x01020304 };
+	return bint.c[0] == 1; 
+}
+
+static uint16_t swap_bytes_16(uint16_t num) {
+	return
+		(num >> 8) |
+		(num << 8);
+}
+
+static uint32_t swap_bytes_32(uint32_t num) {
+	return
+		((num >> 24) & 0x000000ff) |
+		((num >> 8)  & 0x0000ff00) |
+		((num << 8)  & 0x00ff0000) |
+		((num << 24) & 0xff000000;
+}
+
+static uint64_t swap_bytes_64(uint64_t num) {
+	return
+		((num >> 56) & 0x00000000000000ff) |
+		((num >> 40) & 0x000000000000ff00) |
+		((num >> 24) & 0x0000000000ff0000) |
+		((num >> 8)  & 0x00000000ff000000) |
+		((num << 8)  & 0x000000ff00000000) |
+		((num << 24) & 0x0000ff0000000000) |
+		((num << 40) & 0x00ff000000000000) |
+		((num << 56) & 0xff00000000000000);
+}
+
 int jpack(char * buf, size_t size, const char * format, ...) {
 	uint32_t offset = 0;
 
