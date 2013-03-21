@@ -1,4 +1,4 @@
 *.o
+*.a
 *.so
 *.bin
-workspace/
