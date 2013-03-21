@@ -19,6 +19,7 @@
 
 #include <stdlib.h>
 #include <stdint.h>
+#include <stdarg.h>
 #include <string.h>
 
 #ifdef TEST
@@ -27,18 +28,20 @@
 
 #include "jpack.h"
 
-static int is_big_endian(void) {
+static int system_big_endian = -1;
+
+static int is_system_big_endian(void) {
 	union {
 		uint32_t i;
 		char c[4];
 	} bint = { 0x01020304 };
-	return bint.c[0] == 1; 
+	return bint.c[0] == 1;
 }
 
 static uint16_t swap_bytes_16(uint16_t num) {
 	return
-		(num >> 8) |
-		(num << 8);
+		(uint16_t)(num >> 8) |
+		(uint16_t)(num << 8);
 }
 
 static uint32_t swap_bytes_32(uint32_t num) {
@@ -46,7 +49,7 @@ static uint32_t swap_bytes_32(uint32_t num) {
 		((num >> 24) & 0x000000ff) |
 		((num >> 8)  & 0x0000ff00) |
 		((num << 8)  & 0x00ff0000) |
-		((num << 24) & 0xff000000;
+		((num << 24) & 0xff000000);
 }
 
 static uint64_t swap_bytes_64(uint64_t num) {
@@ -61,75 +64,346 @@ static uint64_t swap_bytes_64(uint64_t num) {
 		((num << 56) & 0xff00000000000000);
 }
 
-int jpack(char * buf, size_t size, const char * format, ...) {
-	int offset = 0;
+static size_t min(size_t a, size_t b) {
+	return a < b ? a : b;
+}
+
+int jpack(uint8_t * buf, size_t size, const char * format, ...) {
+	if (system_big_endian == -1) {
+		system_big_endian = is_system_big_endian();
+	}
+
+	size_t offset = 0;
+	int next_is_big_endian = 0;
+	va_list arg_list;
+
+	va_start(arg_list, format);
 
 	while (*format) {
 		switch (*format) {
-			case 'x':
-			case 'b':
-			case 'B':
-				length += 1;
+			case 'x': {
+				offset++;
+				next_is_big_endian = 0;
 				break;
-			case 'h':
-			case 'H':
-				length += 2;
+			}
+			case 'b': {
+				int8_t val = (int8_t)va_arg(arg_list, int);
+				if (size - offset > 0) {
+					memcpy(buf + offset, &val, min(sizeof(val), size - offset));
+				}
+				offset++;
+				next_is_big_endian = 0;
 				break;
-			case 'i':
-			case 'I':
-			case 'f':
-				length += 4;
+			}
+			case 'B': {
+				uint8_t val = (uint8_t)va_arg(arg_list, int);
+				if (size - offset > 0) {
+					memcpy(buf + offset, &val, min(sizeof(val), size - offset));
+				}
+				offset++;
+				next_is_big_endian = 0;
 				break;
-			case 'l':
-			case 'L':
-			case 'd':
-				length += 8;
+			}
+			case 'h': {
+				int16_t val = (int16_t)va_arg(arg_list, int);
+				if (next_is_big_endian != system_big_endian) {
+					val = (int16_t)swap_bytes_16((uint16_t)val);
+				}
+				if (size - offset > 0) {
+					memcpy(buf + offset, &val, min(sizeof(val), size - offset));
+				}
+				offset += 2;
+				next_is_big_endian = 0;
 				break;
-			case '<':
-			case '>':
-			case '!':
+			}
+			case 'H': {
+				uint16_t val = (uint16_t)va_arg(arg_list, int);
+				if (next_is_big_endian != system_big_endian) {
+					val = swap_bytes_16(val);
+				}
+				if (size - offset > 0) {
+					memcpy(buf + offset, &val, min(sizeof(val), size - offset));
+				}
+				offset += 2;
+				next_is_big_endian = 0;
 				break;
-			default:
+			}
+			case 'i': {
+				int32_t val = va_arg(arg_list, int32_t);
+				if (next_is_big_endian != system_big_endian) {
+					val = (int32_t)swap_bytes_32((uint32_t)val);
+				}
+				if (size - offset > 0) {
+					memcpy(buf + offset, &val, min(sizeof(val), size - offset));
+				}
+				offset += 4;
+				next_is_big_endian = 0;
+				break;
+			}
+			case 'I': {
+				uint32_t val = va_arg(arg_list, uint32_t);
+				if (next_is_big_endian != system_big_endian) {
+					val = swap_bytes_32(val);
+				}
+				if (size - offset > 0) {
+					memcpy(buf + offset, &val, min(sizeof(val), size - offset));
+				}
+				offset += 4;
+				next_is_big_endian = 0;
+				break;
+			}
+			case 'f': {
+				float val = (float)va_arg(arg_list, double);
+				if (next_is_big_endian != system_big_endian) {
+					uint32_t temp = swap_bytes_32(*(uint32_t *)&val);
+					val = *(float *)&temp;
+				}
+				if (size - offset > 0) {
+					memcpy(buf + offset, &val, min(sizeof(val), size - offset));
+				}
+				offset += 4;
+				next_is_big_endian = 0;
+				break;
+			}
+			case 'l': {
+				int64_t val = va_arg(arg_list, int64_t);
+				if (next_is_big_endian != system_big_endian) {
+					val = (int64_t)swap_bytes_64((uint64_t)val);
+				}
+				if (size - offset > 0) {
+					memcpy(buf + offset, &val, min(sizeof(val), size - offset));
+				}
+				offset += 8;
+				next_is_big_endian = 0;
+				break;
+			}
+			case 'L': {
+				uint64_t val = va_arg(arg_list, uint64_t);
+				if (next_is_big_endian != system_big_endian) {
+					val = swap_bytes_64(val);
+				}
+				if (size - offset > 0) {
+					memcpy(buf + offset, &val, min(sizeof(val), size - offset));
+				}
+				offset += 8;
+				next_is_big_endian = 0;
+				break;
+			}
+			case 'd': {
+				double val = va_arg(arg_list, double);
+				if (next_is_big_endian != system_big_endian) {
+					uint64_t temp = swap_bytes_64(*(uint64_t *)&val);
+					val = *(double *)&temp;
+				}
+				if (size - offset > 0) {
+					memcpy(buf + offset, &val, min(sizeof(val), size - offset));
+				}
+				offset += 8;
+				next_is_big_endian = 0;
+				break;
+			}
+			case 's': {
+				const char * val = va_arg(arg_list, const char *);
+				size_t length = strlen(val) + 1;
+				if (size - offset > 0) {
+					memcpy(buf + offset, val, min(length, size - offset));
+				}
+				offset += length;
+				next_is_big_endian = 0;
+				break;
+			}
+			case '<': {
+				next_is_big_endian = 0;
+				break;
+			}
+			case '>': {
+				next_is_big_endian = 1;
+				break;
+			}
+			case '!': {
+				next_is_big_endian = 1;
+				break;
+			}
+			default: {
+				va_end(arg_list);
 				return -1;
+			}
 		}
 		format++;
 	}
-	return 0;
+
+	va_end(arg_list);
+
+	return (int)offset;
 }
 
-void junpack(const char * buf, size_t size, const char * format, ...) {
-	uint32_t offset = 0;
+int junpack(const uint8_t * buf, size_t size, const char * format, ...) {
+	if (system_big_endian == -1) {
+		system_big_endian = is_system_big_endian();
+	}
+
+	size_t offset = 0;
+	int next_is_big_endian = 0;
+	va_list arg_list;
+
+	va_start(arg_list, format);
 
 	while (*format) {
 		switch (*format) {
-			case 'x':
-			case 'b':
-			case 'B':
-				length += 1;
+			case 'x': {
+				offset++;
+				next_is_big_endian = 0;
 				break;
-			case 'h':
-			case 'H':
-				length += 2;
+			}
+			case 'b': {
+				int8_t * val = va_arg(arg_list, int8_t *);
+				if (size - offset > 0) {
+					memcpy(val, buf + offset, min(sizeof(*val), size - offset));
+				}
+				offset++;
+				next_is_big_endian = 0;
 				break;
-			case 'i':
-			case 'I':
-			case 'f':
-				length += 4;
+			}
+			case 'B': {
+				uint8_t * val = va_arg(arg_list, uint8_t *);
+				if (size - offset > 0) {
+					memcpy(val, buf + offset, min(sizeof(*val), size - offset));
+				}
+				offset++;
+				next_is_big_endian = 0;
 				break;
-			case 'l':
-			case 'L':
-			case 'd':
-				length += 8;
+			}
+			case 'h': {
+				int16_t * val = va_arg(arg_list, int16_t *);
+				if (size - offset > 0) {
+					memcpy(val, buf + offset, min(sizeof(*val), size - offset));
+				}
+				if (next_is_big_endian != system_big_endian) {
+					*val = (int16_t)swap_bytes_16((uint16_t)*val);
+				}
+				offset += 2;
+				next_is_big_endian = 0;
 				break;
-			case '<':
-			case '>':
-			case '!':
+			}
+			case 'H': {
+				uint16_t * val = va_arg(arg_list, uint16_t *);
+				if (size - offset > 0) {
+					memcpy(val, buf + offset, min(sizeof(*val), size - offset));
+				}
+				if (next_is_big_endian != system_big_endian) {
+					*val = swap_bytes_16(*val);
+				}
+				offset += 2;
+				next_is_big_endian = 0;
 				break;
-			default:
+			}
+			case 'i': {
+				int32_t * val = va_arg(arg_list, int32_t *);
+				if (size - offset > 0) {
+					memcpy(val, buf + offset, min(sizeof(*val), size - offset));
+				}
+				if (next_is_big_endian != system_big_endian) {
+					*val = (int32_t)swap_bytes_32((uint32_t)*val);
+				}
+				offset += 4;
+				next_is_big_endian = 0;
+				break;
+			}
+			case 'I': {
+				uint32_t * val = va_arg(arg_list, uint32_t *);
+				if (size - offset > 0) {
+					memcpy(val, buf + offset, min(sizeof(*val), size - offset));
+				}
+				if (next_is_big_endian != system_big_endian) {
+					*val = swap_bytes_32(*val);
+				}
+				offset += 4;
+				next_is_big_endian = 0;
+				break;
+			}
+			case 'f': {
+				float * val = va_arg(arg_list, float *);
+				if (size - offset > 0) {
+					memcpy(val, buf + offset, min(sizeof(*val), size - offset));
+				}
+				if (next_is_big_endian != system_big_endian) {
+					uint32_t temp = swap_bytes_32(*(uint32_t *)val);
+					*val = *(float *)&temp;
+				}
+				offset += 4;
+				next_is_big_endian = 0;
+				break;
+			}
+			case 'l': {
+				int64_t * val = va_arg(arg_list, int64_t *);
+				if (size - offset > 0) {
+					memcpy(val, buf + offset, min(sizeof(*val), size - offset));
+				}
+				if (next_is_big_endian != system_big_endian) {
+					*val = (int64_t)swap_bytes_64((uint64_t)*val);
+				}
+				offset += 8;
+				next_is_big_endian = 0;
+				break;
+			}
+			case 'L': {
+				uint64_t * val = va_arg(arg_list, uint64_t *);
+				if (size - offset > 0) {
+					memcpy(val, buf + offset, min(sizeof(*val), size - offset));
+				}
+				if (next_is_big_endian != system_big_endian) {
+					*val = swap_bytes_64((uint64_t)*val);
+				}
+				offset += 8;
+				next_is_big_endian = 0;
+				break;
+			}
+			case 'd': {
+				double * val = va_arg(arg_list, double *);
+				if (size - offset > 0) {
+					memcpy(val, buf + offset, min(sizeof(*val), size - offset));
+				}
+				if (next_is_big_endian != system_big_endian) {
+					uint64_t temp = swap_bytes_64(*(uint64_t *)val);
+					*val = *(double *)&temp;
+				}
+				offset += 8;
+				next_is_big_endian = 0;
+				break;
+			}
+			case 's': {
+				char * val = va_arg(arg_list, char *);
+				size_t length = strlen((char *)buf + offset) + 1;
+				if (size - offset > 0) {
+					memcpy(val, buf + offset, min(sizeof(length), size - offset));
+				}
+				offset += length;
+				next_is_big_endian = 0;
+				break;
+			}
+			case '<': {
+				next_is_big_endian = 0;
+				break;
+			}
+			case '>': {
+				next_is_big_endian = 1;
+				break;
+			}
+			case '!': {
+				next_is_big_endian = 1;
+				break;
+			}
+			default: {
+				va_end(arg_list);
 				return -1;
+			}
 		}
+		format++;
 	}
-	format++;
+
+	va_end(arg_list);
+
+	return (int)offset;
 }
 
 int jpack_format_length(const char * format) {
@@ -164,6 +438,8 @@ int jpack_format_length(const char * format) {
 			case '>':
 			case '!':
 				break;
+			case 's':
+				return -2;
 			default:
 				return -1;
 		}
@@ -176,31 +452,102 @@ int jpack_format_length(const char * format) {
 #ifdef TEST
 int main(int argc, char *argv[]) {
 	(void)argc; (void)argv;
-	
-	if (jpack_format_length("IiB") != 9) {
-		fprintf(stderr, "Failed to get buffer length for format");
-		return EXIT_FAILIURE;
-	}
 
-	char buffer[9];
+ 	{ // TEST 1
+		int length = jpack_format_length("IiB");
+		if (length != 9) {
+			fprintf(stderr, "IiB format length should be 9 not: %i\n", length);
+			return EXIT_FAILURE;
+		}
+	} fprintf(stderr, "TEST1 Succeeded\n");
 
-	uint32_t a = 1, a2;
-	int32_t b = -1, b2;
-	uint8_t c = 1, c2;
+	{ // TEST 2
+		uint8_t * buffer;
 
-	if (jpack(buffer, 9, "IiB", a, b, c) < 0) {
-		fprintf(stderr, "Failed to pack data");
-		return EXIT_FAILIURE;
-	}
+		int8_t a = -1, a2;
+		uint8_t b = 2, b2;
+		int16_t c = -3, c2;
+		uint16_t d = 4, d2;
+		int32_t e = -5, e2;
+		uint32_t f = 6, f2;
+		int64_t g = -7, g2;
+		uint64_t h = 8, h2;
+		float i = 1.0f, i2;
+		double j = 2.0, j2;
+		char k[5] = "Test";
+		char k2[5];
 
-	junpack(buffer, 9, "IiB", &a2, &b2, &c2);
+		size_t length = (size_t)jpack_format_length("bBxhHxiIxlLxfd") + 5;
+		buffer = malloc(length);
 
-	if (a != a2 ||
-	    b != b2 ||
-	    c != c2) {
-		fprintf(stderr, "Unpacked data is not the same as packed data");
-		return EXIT_FAILIURE;
-	}
+		if (jpack(buffer, length, "bBxhHxiIxlLxfds", a, b, c, d, e, f, g, h, i, j, k) < 0) {
+			fprintf(stderr, "Failed to pack data\n");
+			return EXIT_FAILURE;
+		}
+
+		junpack(buffer, length, "bBxhHxiIxlLxfds", &a2, &b2, &c2, &d2, &e2, &f2, &g2, &h2, &i2, &j2, k2);
+
+		if (a != a2 ||
+		    b != b2 ||
+		    c != c2 ||
+		    d != d2 ||
+		    e != e2 ||
+		    f != f2 ||
+		    g != g2 ||
+		    h != h2 ||
+		    i != i2 ||
+		    j != j2 ||
+		    strcmp(k, k2) != 0) {
+			fprintf(stderr, "Unpacked data is not the same as packed data\n");
+			return EXIT_FAILURE;
+		}
+
+		free(buffer);
+	} fprintf(stderr, "TEST2 Succeeded\n");
+
+	{ // TEST 3
+		uint8_t * buffer;
+
+		int8_t a = -1, a2;
+		uint8_t b = 2, b2;
+		int16_t c = -3, c2;
+		uint16_t d = 4, d2;
+		int32_t e = -5, e2;
+		uint32_t f = 6, f2;
+		int64_t g = -7, g2;
+		uint64_t h = 8, h2;
+		float i = 1.0f, i2;
+		double j = 2.0, j2;
+		char k[5] = "Test";
+		char k2[5];
+
+		size_t length = (size_t)jpack_format_length("!b!Bx!h!Hx!i!Ix!l!Lx!f!d") + 5;
+		buffer = malloc(length);
+
+		if (jpack(buffer, length, "!b!Bx!h!Hx!i!Ix!l!Lx!f!ds", a, b, c, d, e, f, g, h, i, j, k) < 0) {
+			fprintf(stderr, "Failed to pack data\n");
+			return EXIT_FAILURE;
+		}
+
+		junpack(buffer, length, "!b!Bx!h!Hx!i!Ix!l!Lx!f!ds", &a2, &b2, &c2, &d2, &e2, &f2, &g2, &h2, &i2, &j2, k2);
+
+		if (a != a2 ||
+		    b != b2 ||
+		    c != c2 ||
+		    d != d2 ||
+		    e != e2 ||
+		    f != f2 ||
+		    g != g2 ||
+		    h != h2 ||
+		    i != i2 ||
+		    j != j2 ||
+		    strcmp(k, k2) != 0) {
+			fprintf(stderr, "Unpacked data is not the same as packed data\n");
+			return EXIT_FAILURE;
+		}
+
+		free(buffer);
+	} fprintf(stderr, "TEST3 Succeeded\n");
 
 	return EXIT_SUCCESS;
 }

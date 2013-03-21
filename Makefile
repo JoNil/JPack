@@ -8,18 +8,20 @@ src/jpack.o: src/jpack.c
 	$(CC) $(CFLAGS) -fPIC -c -I./include -o src/jpack.o src/jpack.c
 
 lib/libjpack.so: src/jpack.o
+	mkdir -p lib
 	$(CC) $(LDFLAGS) -shared -o lib/libjpack.so src/jpack.o
 
-test: jpack_test.bin
+test: bin/jpack_test.bin
 
 src/jpack_test.o: src/jpack.c
 	$(CC) $(CFLAGS) -DTEST -c -I./include -o src/jpack_test.o src/jpack.c
 
-jpack_test.bin: src/jpack_test.o
-	$(CC) $(LDFLAGS) -o jpack_test.bin src/jpack_test.o
+bin/jpack_test.bin: src/jpack_test.o
+	mkdir -p bin
+	$(CC) $(LDFLAGS) -o bin/jpack_test.bin src/jpack_test.o
 
 clean:
 	rm -f src/jpack.o
 	rm -f src/jpack_test.o
 	rm -f lib/libjpack.so
-	rm -f jpack_test.bin
+	rm -f bin/jpack_test.bin

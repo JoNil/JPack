@@ -24,7 +24,8 @@
 
 // Packs the data given into the buffer according to the format
 // Returns the number of bytes written to buf. If buf was to short it returns
-// the number of bytes that would have been written if there was enought space
+// the number of bytes that would have been written if there was enought space.
+// It will return -1 if you gave an invalid format
 
 // Option, description
 // <       little-endian (default)
@@ -45,12 +46,13 @@
 // d,           double,   8
 // s,           string,   -
 
-int jpack(char * buf, size_t size, const char * format, ...);
+int jpack(uint8_t * buf, size_t size, const char * format, ...);
 
-// Unpacks the buffer according to the format to the addresses provided
-void junpack(const char * buf, size_t size, const char * format, ...);
+// Unpacks the buffer according to the format to the addresses provided.
+// It will return -1 if you gave an invalid format
+int junpack(const uint8_t * buf, size_t size, const char * format, ...);
 
-// Returns the buffer needed to hold the format or -1 on invalid format and 
+// Returns the buffer needed to hold the format or -1 on invalid format and
 // -2 if the resault is unknown i.e. the format contains a string
 int jpack_format_length(const char * format);
 
