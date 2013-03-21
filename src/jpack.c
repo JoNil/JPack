@@ -2,7 +2,7 @@
 /*                                                                            */
 /* Copyright (C) 2013 Jonathan Nilsson                                        */
 /* Contact: l.a.jonathan.nilsson@gmail.com                                    */
-/*               	                                                             */
+/*               	                                                            */
 /* This file is part of JPack.                                                */
 /*                                                                            */
 /* JPack is free software: you can redistribute it and/or modify              */
@@ -488,16 +488,16 @@ int main(int argc, char *argv[]) {
 		junpack(buffer, length, "bBxhHxiIxlLxfds", &a2, &b2, &c2, &d2, &e2, &f2, &g2, &h2, &i2, &j2, k2);
 
 		if (a != a2 ||
-		    b != b2 ||
-		    c != c2 ||
-		    d != d2 ||
-		    e != e2 ||
-		    f != f2 ||
-		    g != g2 ||
-		    h != h2 ||
-		    i != i2 ||
-		    j != j2 ||
-		    strcmp(k, k2) != 0) {
+				b != b2 ||
+				c != c2 ||
+				d != d2 ||
+				e != e2 ||
+				f != f2 ||
+				g != g2 ||
+				h != h2 ||
+				i != i2 ||
+				j != j2 ||
+				strcmp(k, k2) != 0) {
 			fprintf(stderr, "Unpacked data is not the same as packed data\n");
 			return EXIT_FAILURE;
 		}
@@ -532,16 +532,16 @@ int main(int argc, char *argv[]) {
 		junpack(buffer, length, "!b!Bx!h!Hx!i!Ix!l!Lx!f!ds", &a2, &b2, &c2, &d2, &e2, &f2, &g2, &h2, &i2, &j2, k2);
 
 		if (a != a2 ||
-		    b != b2 ||
-		    c != c2 ||
-		    d != d2 ||
-		    e != e2 ||
-		    f != f2 ||
-		    g != g2 ||
-		    h != h2 ||
-		    i != i2 ||
-		    j != j2 ||
-		    strcmp(k, k2) != 0) {
+				b != b2 ||
+				c != c2 ||
+				d != d2 ||
+				e != e2 ||
+				f != f2 ||
+				g != g2 ||
+				h != h2 ||
+				i != i2 ||
+				j != j2 ||
+				strcmp(k, k2) != 0) {
 			fprintf(stderr, "Unpacked data is not the same as packed data\n");
 			return EXIT_FAILURE;
 		}
