@@ -153,13 +153,13 @@ int jpack(uint8_t * buf, size_t size, const char * format, ...) {
 				break;
 			}
 			case 'f': {
-				float val = (float)va_arg(arg_list, double);
+				union { float fval; uint32_t ival; } val;
+				val.fval = (float)va_arg(arg_list, double);
 				if (next_is_big_endian != system_big_endian) {
-					uint32_t temp = swap_bytes_32(*(uint32_t *)&val);
-					val = *(float *)&temp;
+					val.ival = swap_bytes_32(val.ival);
 				}
 				if (size - offset > 0) {
-					memcpy(buf + offset, &val, min(sizeof(val), size - offset));
+					memcpy(buf + offset, &val.fval, min(sizeof(val), size - offset));
 				}
 				offset += 4;
 				next_is_big_endian = 0;
@@ -190,13 +190,13 @@ int jpack(uint8_t * buf, size_t size, const char * format, ...) {
 				break;
 			}
 			case 'd': {
-				double val = va_arg(arg_list, double);
+				union { double fval; uint64_t ival; } val;
+				val.fval = va_arg(arg_list, double);
 				if (next_is_big_endian != system_big_endian) {
-					uint64_t temp = swap_bytes_64(*(uint64_t *)&val);
-					val = *(double *)&temp;
+					val.ival = swap_bytes_64(val.ival);
 				}
 				if (size - offset > 0) {
-					memcpy(buf + offset, &val, min(sizeof(val), size - offset));
+					memcpy(buf + offset, &val.fval, min(sizeof(val), size - offset));
 				}
 				offset += 8;
 				next_is_big_endian = 0;
@@ -327,8 +327,10 @@ int junpack(const uint8_t * buf, size_t size, const char * format, ...) {
 					memcpy(val, buf + offset, min(sizeof(*val), size - offset));
 				}
 				if (next_is_big_endian != system_big_endian) {
-					uint32_t temp = swap_bytes_32(*(uint32_t *)val);
-					*val = *(float *)&temp;
+					union { float fval; uint32_t ival; } temp;
+					temp.fval = *val;
+					temp.ival = swap_bytes_32(temp.ival);
+					*val = temp.fval;
 				}
 				offset += 4;
 				next_is_big_endian = 0;
@@ -364,8 +366,10 @@ int junpack(const uint8_t * buf, size_t size, const char * format, ...) {
 					memcpy(val, buf + offset, min(sizeof(*val), size - offset));
 				}
 				if (next_is_big_endian != system_big_endian) {
-					uint64_t temp = swap_bytes_64(*(uint64_t *)val);
-					*val = *(double *)&temp;
+					union { double fval; uint64_t ival; } temp;
+					temp.fval = *val;
+					temp.ival = swap_bytes_64(temp.ival);
+					*val = temp.fval;
 				}
 				offset += 8;
 				next_is_big_endian = 0;

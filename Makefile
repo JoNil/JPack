@@ -1,11 +1,15 @@
 CC = gcc
-CFLAGS += -g -std=c99 -Wall -Wextra -Werror -Wconversion -pedantic -pedantic-errors
+CFLAGS += -O3 -std=c99 -Wall -Wextra -Werror -Wconversion -pedantic -pedantic-errors
 LDFLAGS +=
 
-all: lib/libjpack.so
+all: lib/libjpack.so lib/libjpack.a
 
 src/jpack.o: src/jpack.c
 	$(CC) $(CFLAGS) -fPIC -c -I./include -o src/jpack.o src/jpack.c
+
+lib/libjpack.a: src/jpack.o
+	mkdir -p lib
+	ar rcs lib/libjpack.a src/jpack.o
 
 lib/libjpack.so: src/jpack.o
 	mkdir -p lib
@@ -23,5 +27,6 @@ bin/jpack_test.bin: src/jpack_test.o
 clean:
 	rm -f src/jpack.o
 	rm -f src/jpack_test.o
+	rm -f lib/libjpack.a
 	rm -f lib/libjpack.so
 	rm -f bin/jpack_test.bin
