@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS += -O3 -std=c99 -Wall -Wextra -Werror -Wconversion -pedantic -pedantic-errors
+CFLAGS += -O3 -g -std=c99 -Wall -Wextra -Werror -Wconversion -pedantic -pedantic-errors
 LDFLAGS +=
 
 all: lib/libjpack.so lib/libjpack.a
