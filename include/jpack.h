@@ -27,6 +27,10 @@
 #ifndef JPACK_H_
 #define JPACK_H_
 
+#ifdef __cplusplus
+extern "C" {
+#endif /* __cplusplus */
+
 #include <stdlib.h>
 
 // Packs the data given into the buffer according to the format
@@ -62,5 +66,9 @@ int junpack(const uint8_t * buf, size_t size, const char * format, ...);
 // Returns the buffer needed to hold the format or -1 on invalid format and
 // -2 if the resault is unknown i.e. the format contains a string
 int jpack_format_length(const char * format);
+
+#ifdef __cplusplus
+}
+#endif /* __cplusplus */
 
 #endif // JPACK_H_
