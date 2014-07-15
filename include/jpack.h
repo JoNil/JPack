@@ -31,12 +31,10 @@
 extern "C" {
 #endif // __cplusplus
 
-#include <stdlib.h>
-#include <stdint.h>
 
 // Packs the data given into the buffer according to the format
 // Returns the number of bytes written to buf. If buf was to short it returns
-// the number of bytes that would have been written if there was enought space.
+// the number of bytes that was written to the buffer.
 // It will return -1 if you gave an invalid format
 
 // Option, description
@@ -61,11 +59,11 @@ extern "C" {
 uint32_t jpack(uint8_t * buf, size_t size, const char * format, ...);
 
 // Unpacks the buffer according to the format to the addresses provided.
-// It will return -1 if you gave an invalid format
+// It will return -1 if you gave an invalid format otherwise returns the read size
 uint32_t junpack(const uint8_t * buf, size_t size, const char * format, ...);
 
-// Returns the buffer needed to hold the format or -1 on invalid format and
-// -2 if the resault is unknown i.e. the format contains a string
+// Returns the size needed to hold the format or -1 if the format is invalid and
+// -2 if the result is unknown i.e. the format contains a string
 uint32_t jpack_format_length(const char * format);
 
 #ifdef __cplusplus

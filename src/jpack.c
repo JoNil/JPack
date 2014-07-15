@@ -45,30 +45,33 @@ static int is_system_big_endian(void) {
     return bint.c[0] == 1;
 }
 
-static uint16_t swap_bytes_16(uint16_t num) {
-    return
-            (uint16_t)(num >> 8) |
-            (uint16_t)(num << 8);
+static void swap_bytes_16(uint16_t * in) {
+    uint16_t num = *in;
+
+    *in = (uint16_t)(num >> 8) |
+          (uint16_t)(num << 8);
 }
 
-static uint32_t swap_bytes_32(uint32_t num) {
-    return
-            ((num >> 24) & 0x000000ff) |
-            ((num >> 8)  & 0x0000ff00) |
-            ((num << 8)  & 0x00ff0000) |
-            ((num << 24) & 0xff000000);
+static void swap_bytes_32(uint32_t * in) {
+    uint32_t num = *in;
+
+    *in = ((num >> 24) & 0x000000ff) |
+          ((num >> 8)  & 0x0000ff00) |
+          ((num << 8)  & 0x00ff0000) |
+          ((num << 24) & 0xff000000);
 }
 
-static uint64_t swap_bytes_64(uint64_t num) {
-    return
-            ((num >> 56) & 0x00000000000000ff) |
-            ((num >> 40) & 0x000000000000ff00) |
-            ((num >> 24) & 0x0000000000ff0000) |
-            ((num >> 8)  & 0x00000000ff000000) |
-            ((num << 8)  & 0x000000ff00000000) |
-            ((num << 24) & 0x0000ff0000000000) |
-            ((num << 40) & 0x00ff000000000000) |
-            ((num << 56) & 0xff00000000000000);
+static void swap_bytes_64(uint64_t * in) {
+    uint64_t num = *in;
+
+    *in = ((num >> 56) & 0x00000000000000ff) |
+          ((num >> 40) & 0x000000000000ff00) |
+          ((num >> 24) & 0x0000000000ff0000) |
+          ((num >> 8)  & 0x00000000ff000000) |
+          ((num << 8)  & 0x000000ff00000000) |
+          ((num << 24) & 0x0000ff0000000000) |
+          ((num << 40) & 0x00ff000000000000) |
+          ((num << 56) & 0xff00000000000000);
 }
 
 static size_t min(size_t a, size_t b) {
@@ -114,7 +117,7 @@ uint32_t jpack(uint8_t * buf, size_t size, const char * format, ...) {
         case 'h': {
             int16_t val = (int16_t)va_arg(arg_list, int);
             if (next_is_big_endian != system_big_endian) {
-                val = (int16_t)swap_bytes_16((uint16_t)val);
+                swap_bytes_16((uint16_t *)(&val));
             }
             if (size - offset > 0) {
                 memcpy(buf + offset, &val, min(sizeof(val), size - offset));
@@ -126,7 +129,7 @@ uint32_t jpack(uint8_t * buf, size_t size, const char * format, ...) {
         case 'H': {
             uint16_t val = (uint16_t)va_arg(arg_list, int);
             if (next_is_big_endian != system_big_endian) {
-                val = swap_bytes_16(val);
+                swap_bytes_16(&val);
             }
             if (size - offset > 0) {
                 memcpy(buf + offset, &val, min(sizeof(val), size - offset));
@@ -138,7 +141,7 @@ uint32_t jpack(uint8_t * buf, size_t size, const char * format, ...) {
         case 'i': {
             int32_t val = va_arg(arg_list, int32_t);
             if (next_is_big_endian != system_big_endian) {
-                val = (int32_t)swap_bytes_32((uint32_t)val);
+                swap_bytes_32((uint32_t *)(&val));
             }
             if (size - offset > 0) {
                 memcpy(buf + offset, &val, min(sizeof(val), size - offset));
@@ -150,7 +153,7 @@ uint32_t jpack(uint8_t * buf, size_t size, const char * format, ...) {
         case 'I': {
             uint32_t val = va_arg(arg_list, uint32_t);
             if (next_is_big_endian != system_big_endian) {
-                val = swap_bytes_32(val);
+                swap_bytes_32(&val);
             }
             if (size - offset > 0) {
                 memcpy(buf + offset, &val, min(sizeof(val), size - offset));
@@ -160,13 +163,12 @@ uint32_t jpack(uint8_t * buf, size_t size, const char * format, ...) {
             break;
         }
         case 'f': {
-            union { float fval; uint32_t ival; } val;
-            val.fval = (float)va_arg(arg_list, double);
+            float val = (float)(va_arg(arg_list, double));
             if (next_is_big_endian != system_big_endian) {
-                val.ival = swap_bytes_32(val.ival);
+                swap_bytes_32((uint32_t *)(&val));
             }
             if (size - offset > 0) {
-                memcpy(buf + offset, &val.fval, min(sizeof(val), size - offset));
+                memcpy(buf + offset, &val, min(sizeof(val), size - offset));
             }
             offset += 4;
             next_is_big_endian = 0;
@@ -175,7 +177,7 @@ uint32_t jpack(uint8_t * buf, size_t size, const char * format, ...) {
         case 'l': {
             int64_t val = va_arg(arg_list, int64_t);
             if (next_is_big_endian != system_big_endian) {
-                val = (int64_t)swap_bytes_64((uint64_t)val);
+                swap_bytes_64((uint64_t *)(&val));
             }
             if (size - offset > 0) {
                 memcpy(buf + offset, &val, min(sizeof(val), size - offset));
@@ -187,7 +189,7 @@ uint32_t jpack(uint8_t * buf, size_t size, const char * format, ...) {
         case 'L': {
             uint64_t val = va_arg(arg_list, uint64_t);
             if (next_is_big_endian != system_big_endian) {
-                val = swap_bytes_64(val);
+                swap_bytes_64(&val);
             }
             if (size - offset > 0) {
                 memcpy(buf + offset, &val, min(sizeof(val), size - offset));
@@ -197,13 +199,12 @@ uint32_t jpack(uint8_t * buf, size_t size, const char * format, ...) {
             break;
         }
         case 'd': {
-            union { double fval; uint64_t ival; } val;
-            val.fval = va_arg(arg_list, double);
+            double val = va_arg(arg_list, double);
             if (next_is_big_endian != system_big_endian) {
-                val.ival = swap_bytes_64(val.ival);
+                swap_bytes_64((uint64_t *)(&val));
             }
             if (size - offset > 0) {
-                memcpy(buf + offset, &val.fval, min(sizeof(val), size - offset));
+                memcpy(buf + offset, &val, min(sizeof(val), size - offset));
             }
             offset += 8;
             next_is_big_endian = 0;
@@ -285,7 +286,7 @@ uint32_t junpack(const uint8_t * buf, size_t size, const char * format, ...) {
                 memcpy(val, buf + offset, min(sizeof(*val), size - offset));
             }
             if (next_is_big_endian != system_big_endian) {
-                *val = (int16_t)swap_bytes_16((uint16_t)*val);
+                swap_bytes_16((uint16_t *)(val));
             }
             offset += 2;
             next_is_big_endian = 0;
@@ -297,7 +298,7 @@ uint32_t junpack(const uint8_t * buf, size_t size, const char * format, ...) {
                 memcpy(val, buf + offset, min(sizeof(*val), size - offset));
             }
             if (next_is_big_endian != system_big_endian) {
-                *val = swap_bytes_16(*val);
+                swap_bytes_16(val);
             }
             offset += 2;
             next_is_big_endian = 0;
@@ -309,7 +310,7 @@ uint32_t junpack(const uint8_t * buf, size_t size, const char * format, ...) {
                 memcpy(val, buf + offset, min(sizeof(*val), size - offset));
             }
             if (next_is_big_endian != system_big_endian) {
-                *val = (int32_t)swap_bytes_32((uint32_t)*val);
+                swap_bytes_32((uint32_t *)(val));
             }
             offset += 4;
             next_is_big_endian = 0;
@@ -321,7 +322,7 @@ uint32_t junpack(const uint8_t * buf, size_t size, const char * format, ...) {
                 memcpy(val, buf + offset, min(sizeof(*val), size - offset));
             }
             if (next_is_big_endian != system_big_endian) {
-                *val = swap_bytes_32(*val);
+                swap_bytes_32(val);
             }
             offset += 4;
             next_is_big_endian = 0;
@@ -333,10 +334,7 @@ uint32_t junpack(const uint8_t * buf, size_t size, const char * format, ...) {
                 memcpy(val, buf + offset, min(sizeof(*val), size - offset));
             }
             if (next_is_big_endian != system_big_endian) {
-                union { float fval; uint32_t ival; } temp;
-                temp.fval = *val;
-                temp.ival = swap_bytes_32(temp.ival);
-                *val = temp.fval;
+                swap_bytes_32((uint32_t *)(val));
             }
             offset += 4;
             next_is_big_endian = 0;
@@ -348,7 +346,7 @@ uint32_t junpack(const uint8_t * buf, size_t size, const char * format, ...) {
                 memcpy(val, buf + offset, min(sizeof(*val), size - offset));
             }
             if (next_is_big_endian != system_big_endian) {
-                *val = (int64_t)swap_bytes_64((uint64_t)*val);
+                swap_bytes_64((uint64_t *)(val));
             }
             offset += 8;
             next_is_big_endian = 0;
@@ -360,7 +358,7 @@ uint32_t junpack(const uint8_t * buf, size_t size, const char * format, ...) {
                 memcpy(val, buf + offset, min(sizeof(*val), size - offset));
             }
             if (next_is_big_endian != system_big_endian) {
-                *val = swap_bytes_64((uint64_t)*val);
+                swap_bytes_64(val);
             }
             offset += 8;
             next_is_big_endian = 0;
@@ -372,10 +370,7 @@ uint32_t junpack(const uint8_t * buf, size_t size, const char * format, ...) {
                 memcpy(val, buf + offset, min(sizeof(*val), size - offset));
             }
             if (next_is_big_endian != system_big_endian) {
-                union { double fval; uint64_t ival; } temp;
-                temp.fval = *val;
-                temp.ival = swap_bytes_64(temp.ival);
-                *val = temp.fval;
+                swap_bytes_64((uint64_t *)(val));
             }
             offset += 8;
             next_is_big_endian = 0;
@@ -383,10 +378,11 @@ uint32_t junpack(const uint8_t * buf, size_t size, const char * format, ...) {
         }
         case 's': {
             char * val = va_arg(arg_list, char *);
-            uint32_t length = (uint32_t)(strlen((char *)buf + offset) + 1);
+            uint32_t length = (uint32_t)(strlen((const char *)(buf + offset)));
             if (size - offset > 0) {
                 memcpy(val, buf + offset, min(sizeof(length), size - offset));
             }
+            val[length] = 0;
             offset += length;
             next_is_big_endian = 0;
             break;
@@ -493,6 +489,8 @@ int main(int argc, char *argv[]) {
 
         junpack(buffer, length, "bBxhHxiIxlLxfds", &a2, &b2, &c2, &d2, &e2, &f2, &g2, &h2, &i2, &j2, k2);
 
+        free(buffer);
+
         if (a != a2 ||
                 b != b2 ||
                 c != c2 ||
@@ -507,8 +505,6 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Unpacked data is not the same as packed data\n");
             return EXIT_FAILURE;
         }
-
-        free(buffer);
     } fprintf(stderr, "TEST2 Succeeded\n");
 
     { // TEST 3
@@ -534,6 +530,8 @@ int main(int argc, char *argv[]) {
 
         junpack(buffer, length, "!b!Bx!h!Hx!i!Ix!l!Lx!f!ds", &a2, &b2, &c2, &d2, &e2, &f2, &g2, &h2, &i2, &j2, k2);
 
+        free(buffer);
+
         if (a != a2 ||
             b != b2 ||
             c != c2 ||
@@ -548,8 +546,6 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "Unpacked data is not the same as packed data\n");
             return EXIT_FAILURE;
         }
-
-        free(buffer);
     } fprintf(stderr, "TEST3 Succeeded\n");
 
     return EXIT_SUCCESS;
